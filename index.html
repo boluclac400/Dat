@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kinh Doanh & Trang Trí Phòng Trọ 3D</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: #111;
+      overflow: hidden;
+      color: #fff;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    /* UI Overlay */
+    .hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(5px);
+    }
+    .hud h2 {
+      font-size: 18px;
+      color: #2ecc71;
+      margin-bottom: 5px;
+    }
+    .customer-card {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 260px;
+      background: rgba(20, 20, 30, 0.85);
+      padding: 15px;
+      border-radius: 12px;
+      border: 2px solid #3498db;
+      backdrop-filter: blur(5px);
+    }
+    .customer-card h3 {
+      font-size: 16px;
+      color: #f1c40f;
+      margin-bottom: 8px;
+    }
+    .customer-card p {
+      font-size: 13px;
+      color: #ddd;
+      margin-bottom: 5px;
+    }
+    /* Control Panel Decorate */
+    .shop-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95%;
+      max-width: 500px;
+      background: rgba(20, 20, 30, 0.9);
+      padding: 12px;
+      border-radius: 15px;
+      display: flex;
+      gap: 10px;
+      justify-content: space-around;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .item-btn {
+      flex: 1;
+      background: #2c3e50;
+      border: 2px solid #34495e;
+      color: white;
+      padding: 10px 5px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .item-btn:active {
+      transform: scale(0.95);
+      background: #2980b9;
+    }
+    .item-btn span {
+      color: #2ecc71;
+      font-size: 11px;
+    }
+    .action-btn {
+      position: absolute;
+      bottom: 110px;
+      right: 20px;
+      background: #e67e22;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 25px;
+      font-weight: bold;
+      font-size: 14px;
+      box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <!-- HUD Tiền tệ -->
+  <div class="hud">
+    <h2>💰 Quỹ: <span id="money">50.000.000</span> đ</h2>
+    <p style="font-size: 12px; color: #aaa;">Doanh thu phòng: <span id="rent">0</span> đ/tháng</p>
+  </div>
+
+  <!-- Yêu cầu của Khách Hàng -->
+  <div class="customer-card">
+    <h3>👤 Khách Thuê Phòng</h3>
+    <p><b>Tên:</b> <span id="cust-name">Nguyễn Văn A</span></p>
+    <p><b>Đối tượng:</b> <span id="cust-type">Sinh viên</span></p>
+    <p><b>Tài chính:</b> <span id="cust-budget" style="color:#2ecc71;">3.000.000 đ/tháng</span></p>
+    <p><b>Yêu cầu:</b> <span id="cust-req">Cần Giường + Bàn học</span></p>
+  </div>
+
+  <!-- Nút cho thuê -->
+  <button class="action-btn" id="btnRent">🔑 CHO THUÊ PHÒNG</button>
+
+  <!-- Bảng Trang trí Nội thất -->
+  <div class="shop-panel">
+    <button class="item-btn" id="btnAddBed">
+      🛏️ Giường Tầng
+      <span>+1.5M/tháng</span>
+    </button>
+    <button class="item-btn" id="btnAddDesk">
+      💻 Bàn Làm Việc
+      <span>+1.0M/tháng</span>
+    </button>
+    <button class="item-btn" id="btnAddAC">
+      ❄️ Điều Hòa 3D
+      <span>+2.0M/tháng</span>
+    </button>
+    <button class="item-btn" id="btnClear" style="background:#c0392b; border-color:#e74c3c;">
+      🧹 Dọn Phòng
+      <span>Clear</span>
+    </button>
+  </div>
+
+  <!-- Import Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // --- KHỞI TẠO THREE.JS ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(8, 7, 10);
+    camera.lookAt(0, 1, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // --- ÁNH SÁNG ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
+    dirLight.position.set(5, 12, 8);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // --- XÂY DỰNG KHUNG PHÒNG TRỌ 3D ---
+    function createRoom() {
+      const roomGroup = new THREE.Group();
+
+      // Sàn nhà
+      const floorGeo = new THREE.BoxGeometry(6, 0.2, 6);
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0xddb892, roughness: 0.4 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.position.y = -0.1;
+      floor.receiveShadow = true;
+      roomGroup.add(floor);
+
+      // Tường Sau
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa });
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 0.2), wallMat);
+      backWall.position.set(0, 2, -3);
+      roomGroup.add(backWall);
+
+      // Tường Trái
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4, 6), wallMat);
+      leftWall.position.set(-3, 2, 0);
+      roomGroup.add(leftWall);
+
+      // Cửa sổ 3D
+      const windowGeo = new THREE.BoxGeometry(1.8, 1.2, 0.1);
+      const windowMat = new THREE.MeshStandardMaterial({ color: 0x74b9ff, roughness: 0.1, transparent: true, opacity: 0.6 });
+      const win = new THREE.Mesh(windowGeo, windowMat);
+      win.position.set(0, 2.5, -2.9);
+      roomGroup.add(win);
+
+      scene.add(roomGroup);
+    }
+    createRoom();
+
+    // --- DỮ LIỆU GAME & ĐỒ NỘI THẤT ---
+    let totalMoney = 50000000;
+    let currentRent = 0;
+    let roomItems = [];
+
+    const customers = [
+      { name: "Lê Minh (Sinh viên)", type: "Tiết kiệm", budget: 2500000, req: "Cần Giường" },
+      { name: "Chị Hoa (Văn phòng)", type: "Ká Giả", budget: 4500000, req: "Cần Giường + Điều Hòa" },
+      { name: "Anh Nam (IT Freeland)", type: "Thu nhập cao", budget: 6000000, req: "Cần Bàn làm việc + Điều Hòa" }
+    ];
+    let currentCustIndex = 0;
+
+    // --- MÔ HÌNH NỘI THẤT 3D ---
+    function spawnBed() {
+      const bedGroup = new THREE.Group();
+      // Khung giường
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(2, 0.4, 3), new THREE.MeshStandardMaterial({ color: 0x8e44ad }));
+      frame.castShadow = true;
+      bedGroup.add(frame);
+      // Nệm
+      const mat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.3, 2.8), new THREE.MeshStandardMaterial({ color: 0xecf0f1 }));
+      mat.position.y = 0.35;
+      bedGroup.add(mat);
+      
+      bedGroup.position.set(-1.8, 0.2, -1.2);
+      scene.add(bedGroup);
+      roomItems.push(bedGroup);
+      currentRent += 1500000;
+      updateUI();
+    }
+
+    function spawnDesk() {
+      const deskGroup = new THREE.Group();
+      // Mặt bàn
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 1), new THREE.MeshStandardMaterial({ color: 0xd35400 }));
+      top.position.y = 1;
+      deskGroup.add(top);
+      // Chân bàn
+      const legGeo = new THREE.BoxGeometry(0.1, 1, 0.1);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+      [[-0.8, 0.5, -0.4], [0.8, 0.5, -0.4], [-0.8, 0.5, 0.4], [0.8, 0.5, 0.4]].forEach(pos => {
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set(...pos);
+        deskGroup.add(leg);
+      });
+
+      deskGroup.position.set(1.8, 0, -1.8);
+      scene.add(deskGroup);
+      roomItems.push(deskGroup);
+      currentRent += 1000000;
+      updateUI();
+    }
+
+    function spawnAC() {
+      const acGroup = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      acGroup.add(body);
+      
+      acGroup.position.set(0, 3.2, -2.7);
+      scene.add(acGroup);
+      roomItems.push(acGroup);
+      currentRent += 2000000;
+      updateUI();
+    }
+
+    function clearRoom() {
+      roomItems.forEach(item => scene.remove(item));
+      roomItems = [];
+      currentRent = 0;
+      updateUI();
+    }
+
+    // --- CẬP NHẬT GIAO DIỆN & TƯƠNG TÁC ---
+    function updateUI() {
+      document.getElementById('money').innerText = totalMoney.toLocaleString('vi-VN');
+      document.getElementById('rent').innerText = currentRent.toLocaleString('vi-VN');
+    }
+
+    function loadCustomer() {
+      const cust = customers[currentCustIndex];
+      document.getElementById('cust-name').innerText = cust.name;
+      document.getElementById('cust-type').innerText = cust.type;
+      document.getElementById('cust-budget').innerText = cust.budget.toLocaleString('vi-VN') + " đ/tháng";
+      document.getElementById('cust-req').innerText = cust.req;
+    }
+
+    // Nút Bấm Sự Kiện
+    document.getElementById('btnAddBed').addEventListener('click', spawnBed);
+    document.getElementById('btnAddDesk').addEventListener('click', spawnDesk);
+    document.getElementById('btnAddAC').addEventListener('click', spawnAC);
+    document.getElementById('btnClear').addEventListener('click', clearRoom);
+
+    document.getElementById('btnRent').addEventListener('click', () => {
+      const cust = customers[currentCustIndex];
+      if (currentRent >= cust.budget * 0.8 && currentRent <= cust.budget * 1.2) {
+        totalMoney += currentRent;
+        alert(`🎉 Thành công! Khách đồng ý thuê với giá ${currentRent.toLocaleString('vi-VN')} đ/tháng!`);
+        clearRoom();
+        currentCustIndex = (currentCustIndex + 1) % customers.length;
+        loadCustomer();
+      } else if (currentRent < cust.budget * 0.8) {
+        alert("❌ Phòng còn quá thiếu nội thất! Khách chê không thuê.");
+      } else {
+        alert("❌ Giá phòng cao vượt quá ngân sách của khách!");
+      }
+    });
+
+    // --- XOAY CAMERA CẢM ỨNG (XOAY KHÔNG GIAN 3D) ---
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    window.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const deltaX = e.touches[0].clientX - previousMousePosition.x;
+      
+      // Xoay góc nhìn Camera xung quanh tâm phòng
+      camera.position.x = camera.position.x * Math.cos(deltaX * 0.005) + camera.position.z * Math.sin(deltaX * 0.005);
+      camera.position.z = camera.position.z * Math.cos(deltaX * 0.005) - camera.position.x * Math.sin(deltaX * 0.005);
+      camera.lookAt(0, 1, 0);
+
+      previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+
+    window.addEventListener('touchend', () => isDragging = false);
+
+    // --- RENDER LOOP ---
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    loadCustomer();
+    updateUI();
+    animate();
+
+    // Tự động điều chỉnh theo kích thước màn hình
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+  </html>
+  
