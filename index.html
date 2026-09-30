@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kinh Doanh & Trang Trí Phòng Trọ 3D - QuocDat</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: #050505;
+      overflow: hidden;
+      color: #fff;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Màn hình Chào đón (Welcome Screen) */
+    .screen-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(10, 20, 15, 0.95);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+    .welcome-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #2ecc71;
+      text-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+      margin-bottom: 30px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .menu-btn {
+      width: 220px;
+      padding: 14px;
+      margin: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      border: 2px solid #2ecc71;
+      border-radius: 25px;
+      background: #061a0e;
+      color: #2ecc71;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+    }
+    .menu-btn:active {
+      transform: scale(0.95);
+      background: #2ecc71;
+      color: #000;
+    }
+
+    /* Popup Đặt tên Trọ */
+    .modal-box {
+      background: #0a1f12;
+      border: 2px solid #2ecc71;
+      padding: 25px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(46, 204, 113, 0.3);
+    }
+    .modal-box input {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2ecc71;
+      background: #020b05;
+      color: #fff;
+      font-size: 16px;
+      text-align: center;
+      outline: none;
+    }
+
+    /* HUD Top Bar (Tiền, Cấp, EXP) */
+    .top-bar {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 600px;
+      background: rgba(5, 20, 10, 0.85);
+      border: 1.5px solid #2ecc71;
+      padding: 10px 20px;
+      border-radius: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(8px);
+      z-index: 10;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .top-item {
+      font-size: 14px;
+      font-weight: bold;
+      color: #e0e0e0;
+    }
+    .top-item span {
+      color: #2ecc71;
+    }
+    .hostel-name-tag {
+      position: absolute;
+      top: 65px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px 15px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #f1c40f;
+      border: 1px solid rgba(241, 196, 15, 0.3);
+    }
+
+    /* Thẻ thông tin Khách */
+    .customer-card {
+      position: absolute;
+      top: 95px;
+      right: 15px;
+      width: 240px;
+      background: rgba(5, 20, 10, 0.85);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1.5px solid #2ecc71;
+      backdrop-filter: blur(5px);
+      z-index: 10;
+      font-size: 12px;
+    }
+    .customer-card h3 {
+      color: #f1c40f;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .customer-card p {
+      margin-bottom: 4px;
+      color: #ccc;
+    }
+
+    /* Nút Cho Thuê */
+    .action-btn {
+      position: absolute;
+      bottom: 125px;
+      right: 15px;
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      color: #000;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 25px;
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    /* Bảng Mua Đồ Decor (Giao diện Xanh Lá - Đen) */
+    .shop-panel {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95%;
+      max-width: 650px;
+      background: rgba(4, 15, 8, 0.92);
+      padding: 10px;
+      border-radius: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      border: 1.5px solid #2ecc71;
+      z-index: 10;
+      box-shadow: 0 0 15px rgba(46, 204, 113, 0.15);
+    }
+    .item-btn {
+      background: #082111;
+      border: 1px solid #1e6b3c;
+      color: #fff;
+      padding: 8px 4px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.2s;
+    }
+    .item-btn:active {
+      transform: scale(0.92);
+      background: #2ecc71;
+      color: #000;
+    }
+    .item-btn span {
+      color: #2ecc71;
+      font-size: 10px;
+    }
+    .btn-clear {
+      background: #3a0d0d !important;
+      border-color: #8b0000 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Canvas hiển thị 3D -->
+  <div id="canvas-container"></div>
+
+  <!-- Màn hình Chào Đón -->
+  <div id="welcome-screen" class="screen-overlay">
+    <div class="welcome-title">🎮 GAME CỦA QUOCDAT</div>
+    <button class="menu-btn" onclick="openNamingModal()">▶️ CHƠI GAME</button>
+    <button class="menu-btn" onclick="alert('Cài đặt: Đồ họa đã được tối ưu hóa ở mức cao nhất!')">⚙️ CÀI ĐẶT</button>
+  </div>
+
+  <!-- Modal Đặt tên Trọ -->
+  <div id="naming-modal" class="screen-overlay" style="display: none;">
+    <div class="modal-box">
+      <h3 style="color: #2ecc71;">TÊN KHU NHÀ TRỌ</h3>
+      <input type="text" id="hostel-input" value="Trọ Cao Cấp QuocDat" maxlength="20">
+      <button class="menu-btn" style="width:100%; margin:0;" onclick="startGame()">VÀO QUẢN LÝ</button>
+    </div>
+  </div>
+
+  <!-- Thanh trạng thái Top Bar (Tiền, Cấp, EXP) -->
+  <div class="top-bar">
+    <div class="top-item">💰 <span id="money">20.000.000</span> đ</div>
+    <div class="top-item">⭐ Cấp: <span id="level">1</span></div>
+    <div class="top-item">📊 EXP: <span id="exp">0/100</span></div>
+  </div>
+  <div class="hostel-name-tag" id="hostel-display">Trọ QuocDat</div>
+
+  <!-- Thẻ Khách Hàng -->
+  <div class="customer-card">
+    <h3>👤 KHÁCH THUÊ</h3>
+    <p><b>Tên:</b> <span id="cust-name">---</span></p>
+    <p><b>Ngân sách:</b> <span id="cust-budget" style="color:#2ecc71;">0 đ</span></p>
+    <p><b>Giá phòng hiện tại:</b> <span id="room-price" style="color:#f1c40f;">0 đ</span></p>
+  </div>
+
+  <button class="action-btn" id="btnRent">🔑 CHO THUÊ</button>
+
+  <!-- Bảng Mua Đồ Decor (Nền Xanh Lá Đen) -->
+  <div class="shop-panel">
+    <button class="item-btn" onclick="buyItem('bed')">
+      🛏️ Giường Tầng
+      <span>+500K giá phòng</span>
+    </button>
+    <button class="item-btn" onclick="buyItem('desk')">
+      💻 Bàn Học
+      <span>+300K giá phòng</span>
+    </button>
+    <button class="item-btn" onclick="buyItem('ac')">
+      ❄️ Điều Hòa
+      <span>+800K giá phòng</span>
+    </button>
+    <button class="item-btn" onclick="buyItem('led')">
+      🌈 Đèn LED RGB
+      <span>+400K giá phòng</span>
+    </button>
+    <button class="item-btn" onclick="buyItem('fridge')">
+      🧊 Tủ Lạnh
+      <span>+600K giá phòng</span>
+    </button>
+    <button class="item-btn" onclick="buyItem('plant')">
+      🪴 Cây Cảnh
+      <span>+200K giá phòng</span>
+    </button>
+    <button class="item-btn" onclick="buyItem('painting')">
+      🖼️ Tranh 3D
+      <span>+150K giá phòng</span>
+    </button>
+    <button class="item-btn btn-clear" onclick="clearRoom()">
+      🧹 Dọn Phòng
+      <span>Xóa hết đồ</span>
+    </button>
+  </div>
+
+  <!-- Import Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // --- CẤU HÌNH GAME & DỮ LIỆU ---
+    let player = {
+      money: 20000000,
+      level: 1,
+      exp: 0,
+      maxExp: 100,
+      hostelName: "Trọ QuocDat"
+    };
+
+    let roomPrice = 0;
+    let roomItems = [];
+    let ledLights = [];
+
+    const itemData = {
+      bed: { cost: 1500000, rentPlus: 500000 },
+      desk: { cost: 800000, rentPlus: 300000 },
+      ac: { cost: 2500000, rentPlus: 800000 },
+      led: { cost: 600000, rentPlus: 400000 },
+      fridge: { cost: 2000000, rentPlus: 600000 },
+      plant: { cost: 300000, rentPlus: 200000 },
+      painting: { cost: 400000, rentPlus: 150000 }
+    };
+
+    const customers = [
+      { name: "Nguyễn Văn Sinh (Sinh viên)", budget: 1200000 },
+      { name: "Lê Thị Hoa (Kế toán)", budget: 2200000 },
+      { name: "Trần Minh Tấn (Lập trình viên)", budget: 3500000 }
+    ];
+    let currentCustIndex = 0;
+
+    // --- KHỞI TẠO THREE.JS VỚI ĐỒ HỌA SẮC NÉT & ĐỘ BÓNG ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0f0d);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(7, 6, 9);
+    camera.lookAt(0, 1, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Đổ bóng mịn cao cấp
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    container.appendChild(renderer.domElement);
+
+    // --- ÁNH SÁNG PHÒNG ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 0.9);
+    dirLight.position.set(6, 12, 6);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    // --- DỰNG PHÒNG TRỌ 3D SẮC NÉT ---
+    function createRoom() {
+      const roomGroup = new THREE.Group();
+
+      // Sàn bóng
+      const floorGeo = new THREE.BoxGeometry(6, 0.2, 6);
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x3a2e2b, roughness: 0.2, metalness: 0.1 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.position.y = -0.1;
+      floor.receiveShadow = true;
+      roomGroup.add(floor);
+
+      // Tường nhà
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xdedede, roughness: 0.5 });
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 0.2), wallMat);
+      backWall.position.set(0, 2, -3);
+      backWall.receiveShadow = true;
+      roomGroup.add(backWall);
+
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4, 6), wallMat);
+      leftWall.position.set(-3, 2, 0);
+      leftWall.receiveShadow = true;
+      roomGroup.add(leftWall);
+
+      scene.add(roomGroup);
+    }
+    createRoom();
+
+    // --- TẠO CÁC MÓN ĐỒ DECOR 3D ---
+    function buyItem(type) {
+      const item = itemData[type];
+      if (player.money < item.cost) {
+        alert("❌ Bạn không đủ tiền sắm món đồ này!");
+        return;
+      }
+
+      player.money -= item.cost;
+      roomPrice += item.rentPlus;
+
+      let obj = new THREE.Group();
+
+      if (type === 'bed') {
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 3.2), new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.3 }));
+        frame.castShadow = true;
+        obj.add(frame);
+        const mat = new THREE.Mesh(new THREE.BoxGeometry(2, 0.3, 3), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }));
+        mat.position.y = 0.35;
+        obj.add(mat);
+        obj.position.set(-1.7, 0.2, -1.2);
+      } 
+      else if (type === 'desk') {
+        const top = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.5 }));
+        top.position.y = 1;
+        top.castShadow = true;
+        obj.add(top);
+        obj.position.set(1.8, 0, -1.8);
+      } 
+      else if (type === 'ac') {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+        body.castShadow = true;
+        obj.add(body);
+        obj.position.set(0, 3.2, -2.8);
+      } 
+      else if (type === 'led') {
+        // Đèn LED Dây
+        const stripGeo = new THREE.BoxGeometry(5.8, 0.08, 0.08);
+        const stripMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        const strip = new THREE.Mesh(stripGeo, stripMat);
+        obj.add(strip);
+
+        const pointLight = new THREE.PointLight(0x00ffff, 1.5, 6);
+        pointLight.position.set(0, -0.2, 0);
+        obj.add(pointLight);
+
+        obj.position.set(0, 3.8, -2.85);
+        ledLights.push({ mesh: stripMat, light: pointLight });
+      }
+      else if (type === 'fridge') {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 2.2, 1), new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.8, roughness: 0.2 }));
+        body.castShadow = true;
+        body.position.y = 1.1;
+        obj.add(body);
+        obj.position.set(-2.2, 0, 1.8);
+      }
+      else if (type === 'plant') {
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.2, 0.5), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        pot.position.y = 0.25;
+        obj.add(pot);
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+        leaf.position.y = 0.65;
+        obj.add(leaf);
+        obj.position.set(2.2, 0, 2);
+      }
+      else if (type === 'painting') {
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.8, 0.05), new THREE.MeshStandardMaterial({ color: 0xe74c3c }));
+        obj.add(frame);
+        obj.position.set(-2.85, 2.3, -0.5);
+        obj.rotation.y = Math.PI / 2;
+      }
+
+      scene.add(obj);
+      roomItems.push(obj);
+      updateUI();
+    }
+
+    function clearRoom() {
+      roomItems.forEach(item => scene.remove(item));
+      roomItems = [];
+      ledLights = [];
+      roomPrice = 0;
+      updateUI();
+    }
+
+    // --- LỜI GIẢI CHO BÀI TOÁN LỖ KHI XÂY QuÁ TAY ---
+    document.getElementById('btnRent').addEventListener('click', () => {
+      const cust = customers[currentCustIndex];
+
+      if (roomPrice === 0) {
+        alert("⚠️ Phòng chưa decor gì, khách không thể thuê!");
+        return;
+      }
+
+      if (roomPrice <= cust.budget) {
+        // Thuê thành công
+        player.money += roomPrice;
+        addEXP(40);
+        alert(`🎉 THÀNH CÔNG! ${cust.name} đã đồng ý thuê phòng với giá ${roomPrice.toLocaleString('vi-VN')} đ/tháng!`);
+        clearRoom();
+        currentCustIndex = (currentCustIndex + 1) % customers.length;
+        loadCustomer();
+      } else {
+        // Xây vượt quá ngân sách khách -> BỊ LỖ TIỀN
+        let penalty = Math.floor(roomPrice * 0.3);
+        player.money -= penalty;
+        alert(`❌ BỊ LỖ NẶNG! Giá phòng (${roomPrice.toLocaleString('vi-VN')} đ) vượt quá ngân sách (${cust.budget.toLocaleString('vi-VN')} đ) của ${cust.name}.\nKhách bỏ đi và bạn bị phạt lỗ -${penalty.toLocaleString('vi-VN')} đ tiền chi phí đền bù!`);
+        clearRoom();
+        updateUI();
+      }
+    });
+
+    // --- HỆ THỐNG KINH NGHIỆM & CẤP ĐỘ ---
+    function addEXP(amount) {
+      player.exp += amount;
+      if (player.exp >= player.maxExp) {
+        player.level += 1;
+        player.exp -= player.maxExp;
+        player.maxExp += 50;
+        alert(`🎊 CHÚC MỪNG! Khu trọ của bạn đã tăng lên CẤP ${player.level}!`);
+      }
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById('money').innerText = player.money.toLocaleString('vi-VN');
+      document.getElementById('level').innerText = player.level;
+      document.getElementById('exp').innerText = `${player.exp}/${player.maxExp}`;
+      document.getElementById('room-price').innerText = roomPrice.toLocaleString('vi-VN') + " đ";
+    }
+
+    function loadCustomer() {
+      const cust = customers[currentCustIndex];
+      document.getElementById('cust-name').innerText = cust.name;
+      document.getElementById('cust-budget').innerText = cust.budget.toLocaleString('vi-VN') + " đ";
+    }
+
+    // --- MÀN HÌNH CHÀO ĐÓN & ĐẶT TÊN ---
+    function openNamingModal() {
+      document.getElementById('welcome-screen').style.display = 'none';
+      document.getElementById('naming-modal').style.display = 'flex';
+    }
+
+    function startGame() {
+      const inputName = document.getElementById('hostel-input').value.trim();
+      if (inputName !== "") {
+        player.hostelName = inputName;
+      }
+      document.getElementById('hostel-display').innerText = player.hostelName;
+      document.getElementById('naming-modal').style.display = 'none';
+      
+      loadCustomer();
+      updateUI();
+    }
+
+    // --- ANIMATE LOOP (HIỆU ỨNG ĐÈN LED RGB DỘNG) ---
+    let hue = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Đổi màu Đèn LED RGB liên tục
+      if (ledLights.length > 0) {
+        hue = (hue + 0.005) % 1;
+        const color = new THREE.Color().setHSL(hue, 1, 0.5);
+        ledLights.forEach(led => {
+          led.mesh.color = color;
+          led.light.color = color;
+        });
+      }
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Tự động căn chỉnh kích thước màn hình
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+  </html>
+  
