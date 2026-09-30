@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Game Quản Lý & Trang Trí Phòng Trọ 3D</title>
+  <title>Game Quản Lý Phòng Trọ 3D</title>
   <style>
     * {
       box-sizing: border-box;
@@ -225,7 +225,7 @@
   <!-- Màn hình Chào Đón -->
   <div id="welcome-screen" class="screen-overlay">
     <div class="welcome-title">🎮 GAME CỦA QUOCDAT</div>
-    <button class="menu-btn" onclick="UI.openNaming()">▶️ CHƠI GAME</button>
+    <button class="menu-btn" id="btn-start-game">▶️ CHƠI GAME</button>
   </div>
 
   <!-- Modal Đặt tên -->
@@ -233,7 +233,7 @@
     <div class="modal-box">
       <h3 style="color: #2ecc71;">TÊN KHU NHÀ TRỌ</h3>
       <input type="text" id="hostel-input" value="Trọ Cao Cấp QuocDat" maxlength="20">
-      <button class="menu-btn" style="width:100%; margin:0;" onclick="UI.startGame()">VÀO QUẢN LÝ</button>
+      <button class="menu-btn" style="width:100%; margin:0;" id="btn-confirm-name">VÀO QUẢN LÝ</button>
     </div>
   </div>
 
@@ -281,7 +281,7 @@
     <button class="item-btn btn-clear" onclick="UI.clearRoom()">🧹 Dọn Phòng <span>Xóa hết đồ</span></button>
   </div>
 
-  <!-- Thư viện Three.js ổn định nhất -->
+  <!-- Thư viện Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <script>
@@ -307,25 +307,36 @@
       dog: { cost: 1000000, rentPlus: 300000 }
     };
 
+    // LẮP SỰ KIỆN NÚT BẤM TRỰC TIẾP
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnStart = document.getElementById('btn-start-game');
+      const btnConfirm = document.getElementById('btn-confirm-name');
+
+      if (btnStart) {
+        btnStart.addEventListener('click', () => {
+          document.getElementById('welcome-screen').style.display = 'none';
+          document.getElementById('naming-modal').style.display = 'flex';
+        });
+      }
+
+      if (btnConfirm) {
+        btnConfirm.addEventListener('click', () => {
+          document.getElementById('naming-modal').style.display = 'none';
+          try {
+            init3D();
+            createRoom('small');
+          } catch(e) {
+            console.log("3D load error: ", e);
+          }
+          UI.loadCustomer();
+          UI.updateUI();
+        });
+      }
+    });
+
     const UI = {
-      openNaming: () => {
-        document.getElementById('welcome-screen').style.display = 'none';
-        document.getElementById('naming-modal').style.display = 'flex';
-      },
       openRoomMenu: () => { document.getElementById('room-menu-modal').style.display = 'flex'; },
       closeRoomMenu: () => { document.getElementById('room-menu-modal').style.display = 'none'; },
-      
-      startGame: () => {
-        document.getElementById('naming-modal').style.display = 'none';
-        try {
-          init3D();
-          createRoom('small');
-        } catch (e) {
-          console.error("3D init error: ", e);
-        }
-        UI.loadCustomer();
-        UI.updateUI();
-      },
 
       buyItem: (type) => {
         if (roomItems.some(item => item.userData.type === type)) {
@@ -396,7 +407,6 @@
       }
     };
 
-    // TẠO MÔ HÌNH 3D CHI TIẾT
     function create3DModel(type) {
       const group = new THREE.Group();
 
@@ -540,7 +550,6 @@
       return group;
     }
 
-    // KHỞI TẠO ĐỒ HỌA THREE.JS AN TOÀN TUYỆT ĐỐI
     let scene, camera, renderer, roomGroup;
 
     function init3D() {
@@ -557,7 +566,6 @@
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.shadowMap.enabled = true;
 
       container.innerHTML = '';
       container.appendChild(renderer.domElement);
@@ -567,10 +575,8 @@
 
       const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
       mainLight.position.set(5, 8, 5);
-      mainLight.castShadow = true;
       scene.add(mainLight);
 
-      // Thêm điều khiển xoay camera cảm ứng cơ bản
       let isDragging = false, previousMousePosition = { x: 0, y: 0 };
       const dom = renderer.domElement;
 
@@ -578,7 +584,6 @@
       dom.addEventListener('pointermove', (e) => {
         if (!isDragging) return;
         const deltaMove = { x: e.clientX - previousMousePosition.x, y: e.clientY - previousMousePosition.y };
-        
         scene.rotation.y += deltaMove.x * 0.008;
         previousMousePosition = { x: e.clientX, y: e.clientY };
       });
@@ -595,6 +600,4 @@
       if (type === 'long') d = 7.0;
       if (type === 'large') { w = 6.5; d = 6.5; }
 
-      const floorMat = new THREE.MeshLambertMaterial({ color: 0x8e5a2b });
-      const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, d), floorMat);
-      flo
+      const floorMat = new THREE.MeshLamb
